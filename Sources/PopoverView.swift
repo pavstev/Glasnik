@@ -1,10 +1,10 @@
-import KeyboardShortcuts
 import SwiftUI
 
 /// The popover UI. 340pt wide; height is intrinsic. Binds to the shared
-/// `RecorderViewModel` from the environment.
+/// `RecorderViewModel` and `UpdateChecker` from the environment.
 struct PopoverView: View {
     @Environment(RecorderViewModel.self) private var vm
+    @Environment(UpdateChecker.self) private var updater
 
     var body: some View {
         VStack(spacing: 14) {
@@ -29,6 +29,10 @@ struct PopoverView: View {
 
             if case .error(let error) = vm.state {
                 errorView(error)
+            }
+
+            if updater.updateAvailable {
+                updateBanner
             }
 
             footer
@@ -111,7 +115,7 @@ struct PopoverView: View {
             }
             return "Preparing model… (first run downloads ~250 MB)"
         case .idle:
-            return "Tap the mic, or press your shortcut"
+            return "Tap the mic, or press \(GlasnikShortcut.display)"
         case .recording:
             return "Recording… tap to stop"
         case .transcribing:
@@ -188,12 +192,41 @@ struct PopoverView: View {
         .background(RoundedRectangle(cornerRadius: 10).fill(Color.red.opacity(0.08)))
     }
 
+    // MARK: Update banner
+
+    private var updateBanner: some View {
+        Button { updater.openReleasePage() } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.down.circle.fill")
+                Text("Update available — v\(updater.availableVersion ?? "")")
+                    .fontWeight(.medium)
+                Spacer(minLength: 0)
+                Text("Download").foregroundStyle(.blue)
+            }
+            .font(.caption)
+            .padding(8)
+            .frame(maxWidth: .infinity)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.blue.opacity(0.12)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Open the latest release on GitHub")
+    }
+
     // MARK: Footer
 
     private var footer: some View {
-        HStack(spacing: 8) {
-            KeyboardShortcuts.Recorder(for: .toggleRecording)
+        HStack(spacing: 10) {
+            Text("Shortcut \(GlasnikShortcut.display)")
+                .foregroundStyle(.secondary)
+                .help("Global shortcut to start/stop recording")
             Spacer()
+            Button { Task { await updater.check(silent: false) } } label: {
+                Image(systemName: "arrow.triangle.2.circlepath")
+            }
+            .buttonStyle(.borderless)
+            .help("Check for updates")
+            .disabled(updater.isChecking)
             Button {
                 NSApplication.shared.terminate(nil)
             } label: {

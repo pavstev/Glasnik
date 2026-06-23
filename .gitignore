@@ -8,10 +8,12 @@
 /build/
 /DerivedData/
 DerivedData/
+.build/
+Glasnik.app/
 
 # Swift Package Manager
 .swiftpm/
-Package.resolved
+# Package.resolved is committed for reproducible CI builds.
 
 # Xcode user state
 xcuserdata/

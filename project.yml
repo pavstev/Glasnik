@@ -10,9 +10,6 @@ packages:
   WhisperKit:
     url: https://github.com/argmaxinc/argmax-oss-swift
     from: "1.0.0"
-  KeyboardShortcuts:
-    url: https://github.com/sindresorhus/KeyboardShortcuts
-    from: "2.0.0"
 
 targets:
   Glasnik:
@@ -24,8 +21,6 @@ targets:
     dependencies:
       - package: WhisperKit
         product: WhisperKit
-      - package: KeyboardShortcuts
-        product: KeyboardShortcuts
     settings:
       base:
         PRODUCT_NAME: Glasnik

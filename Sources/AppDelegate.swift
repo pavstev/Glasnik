@@ -1,17 +1,18 @@
 import AppKit
-import KeyboardShortcuts
 import SwiftUI
 
 /// Owns the menu bar status item, the popover, the global hotkey, and the shared
-/// `RecorderViewModel`. Using AppKit here (rather than SwiftUI `MenuBarExtra`) gives
+/// observable objects. Using AppKit here (rather than SwiftUI `MenuBarExtra`) gives
 /// us full, reliable control over showing the popover — required so the global
 /// hotkey can pop it open from any app on macOS 14.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let viewModel = RecorderViewModel()
+    let updateChecker = UpdateChecker()
 
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
+    private var hotKey: GlobalHotKey?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         configurePopover()
@@ -23,13 +24,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         Task { await viewModel.prepare() }
+        Task { await updateChecker.check() } // silent background check at launch
     }
 
     // MARK: Setup
 
     private func configurePopover() {
         popover.behavior = .transient
-        let hosting = NSHostingController(rootView: PopoverView().environment(viewModel))
+        let rootView = PopoverView()
+            .environment(viewModel)
+            .environment(updateChecker)
+        let hosting = NSHostingController(rootView: rootView)
         hosting.sizingOptions = [.preferredContentSize] // let the SwiftUI content size the popover
         popover.contentViewController = hosting
     }
@@ -43,8 +48,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func registerHotkey() {
-        KeyboardShortcuts.onKeyUp(for: .toggleRecording) { [weak self] in
-            Task { @MainActor in self?.handleHotkey() }
+        hotKey = GlobalHotKey(keyCode: GlasnikShortcut.keyCode, modifiers: GlasnikShortcut.modifiers) { [weak self] in
+            // The Carbon hotkey callback fires on the main thread.
+            MainActor.assumeIsolated {
+                self?.handleHotkey()
+            }
         }
     }
 

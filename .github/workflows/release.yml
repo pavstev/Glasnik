@@ -1,0 +1,49 @@
+name: Release
+
+# Fully automated: push a tag like v1.2.3 and this builds, packages, and publishes
+# a GitHub Release with the zipped app and auto-generated notes.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & publish
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      - name: Build and bundle
+        env:
+          GLASNIK_VERSION: ${{ steps.version.outputs.version }}
+        run: ./bundle.sh
+
+      - name: Package zip
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent Glasnik.app "Glasnik-${{ steps.version.outputs.version }}.zip"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            "Glasnik-${{ steps.version.outputs.version }}.zip" \
+            --title "Glasnik ${GITHUB_REF_NAME}" \
+            --generate-notes

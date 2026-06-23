@@ -23,12 +23,10 @@ actor WhisperEngine {
     func run(audioPath: String, task: DecodingTask, language: String?) async throws -> String {
         guard let pipe else { throw WhisperEngineError.notLoaded }
         let options = DecodingOptions(task: task, language: language)
-        // WhisperKit 1.0.0 returns a single optional `TranscriptionResult`.
-        // If a future version returns `[TranscriptionResult]`, change the next line to:
-        //   let result = try await pipe.transcribe(audioPath: audioPath, decodeOptions: options)
-        //   return result.map(\.text).joined().trimmingCharacters(in: .whitespacesAndNewlines)
-        let result = try await pipe.transcribe(audioPath: audioPath, decodeOptions: options)
-        return (result?.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        // `transcribe(audioPath:decodeOptions:)` returns `[TranscriptionResult]` (one
+        // entry per decoded window); join their text for the full transcript.
+        let results = try await pipe.transcribe(audioPath: audioPath, decodeOptions: options)
+        return results.map(\.text).joined().trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 
