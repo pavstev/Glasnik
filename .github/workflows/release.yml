@@ -12,9 +12,15 @@ permissions:
 jobs:
   release:
     name: Build & publish
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+
+      # WhisperKit 1.0.0 requires Xcode 16+ / macOS 15 SDK (uses MLState, @retroactive).
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
 
       - name: Derive version from tag
         id: version
