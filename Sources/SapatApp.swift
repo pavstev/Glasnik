@@ -2,7 +2,7 @@ import SwiftUI
 
 /// App entry point.
 ///
-/// Glasnik is a menu bar agent (`LSUIElement`), so there is no main window and no
+/// Šapat is a menu bar agent (`LSUIElement`), so there is no main window and no
 /// Dock icon. All UI lives in an `NSPopover` anchored to an `NSStatusItem`, both
 /// owned by `AppDelegate`. We deliberately use AppKit for the status item + popover
 /// (instead of SwiftUI `MenuBarExtra`) because macOS 14 has no reliable public API
@@ -12,7 +12,7 @@ import SwiftUI
 /// The only SwiftUI `Scene` is `Settings`, which provides the standard preferences
 /// window (reachable via the hotkey recorder embedded in the popover footer too).
 @main
-struct GlasnikApp: App {
+struct SapatApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {

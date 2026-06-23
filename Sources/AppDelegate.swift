@@ -24,12 +24,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         viewModel.onStateChange = { [weak self] state in
             self?.updateStatusIcon(for: state)
+            // A download that finished while busy installs once we're safely idle.
+            self?.updateChecker.installIfReady()
         }
         viewModel.onRequestClose = { [weak self] in
             self?.popover.performClose(nil)
         }
         viewModel.onLevelChange = { [weak self] levels in
             self?.updateWaveform(levels)
+        }
+
+        // The updater may swap the running bundle — only ever while idle, never mid-record.
+        updateChecker.canInstallNow = { [weak self] in
+            guard let vm = self?.viewModel else { return false }
+            return !vm.isBusy && !vm.isRecording
         }
 
         Task { await viewModel.prepare() }
@@ -43,6 +51,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // record clicks, and transcription. It closes only on the menu bar icon or
         // the ✕ button. (`.transient` would dismiss it on any focus change.)
         popover.behavior = .applicationDefined
+        // Šapat's popover wears its own warm copper-on-stone identity, so pin it to a
+        // dark appearance regardless of the system setting (the views are authored for it).
+        popover.appearance = NSAppearance(named: .darkAqua)
         viewModel.history = historyStore
         let rootView = PopoverView()
             .environment(viewModel)
@@ -62,15 +73,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func registerHotkey() {
-        hotKey = GlobalHotKey(keyCode: GlasnikShortcut.keyCode, modifiers: GlasnikShortcut.modifiers) { [weak self] in
+        hotKey = GlobalHotKey(keyCode: SapatShortcut.keyCode, modifiers: SapatShortcut.modifiers) { [weak self] in
             // The Carbon hotkey callback fires on the main thread.
             MainActor.assumeIsolated { self?.handleHotkey() }
         }
         if hotKey == nil {
-            Log.app.error("Failed to register global hotkey \(GlasnikShortcut.display, privacy: .public)")
+            Log.app.error("Failed to register global hotkey \(SapatShortcut.display, privacy: .public)")
             viewModel.noteHotkeyUnavailable()
         } else {
-            Log.app.info("Registered global hotkey \(GlasnikShortcut.display, privacy: .public)")
+            Log.app.info("Registered global hotkey \(SapatShortcut.display, privacy: .public)")
         }
     }
 
@@ -115,15 +126,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// The bold Cyrillic Г, drawn as a monochrome template so the menu bar tints it
-    /// (default for idle, red while recording — until the waveform takes over).
+    /// The bold Cyrillic Ш (Šapat), drawn as a monochrome template so the menu bar tints
+    /// it (default for idle, red while recording — until the waveform takes over).
     private func glyphImage() -> NSImage {
-        let size = NSSize(width: 16, height: 16)
+        let size = NSSize(width: 18, height: 16)
         let image = NSImage(size: size)
         image.lockFocus()
         let font = NSFont.systemFont(ofSize: 14, weight: .bold)
         let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
-        let glyph = NSAttributedString(string: "Г", attributes: attributes)
+        let glyph = NSAttributedString(string: Brand.monogram, attributes: attributes)
         let textSize = glyph.size()
         glyph.draw(at: NSPoint(x: (size.width - textSize.width) / 2, y: (size.height - textSize.height) / 2))
         image.unlockFocus()

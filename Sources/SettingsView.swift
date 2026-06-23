@@ -27,10 +27,10 @@ struct SettingsView: View {
                 }
             }
             Section("Global Shortcut") {
-                LabeledContent("Record toggle", value: GlasnikShortcut.display)
+                LabeledContent("Record toggle", value: SapatShortcut.display)
             }
             Section("About") {
-                Text("Glasnik — record Serbian, get polished English. On-device transcription with WhisperKit; optional local Ollama polish.")
+                Text("\(Brand.displayName) — record Serbian, get polished English. On-device transcription with WhisperKit; optional local Ollama polish.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

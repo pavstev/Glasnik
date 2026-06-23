@@ -2,7 +2,7 @@ import Carbon.HIToolbox
 
 /// The global shortcut: ⌥⇧Space. Picked to dodge this machine's launcher/WM —
 /// Raycast owns ⌘Space and AeroSpace binds ⌥+letters/digits (but never ⌥⇧Space).
-enum GlasnikShortcut {
+enum SapatShortcut {
     /// Carbon virtual key code for the space bar.
     static let keyCode = UInt32(kVK_Space)
     /// Carbon modifier mask: Option + Shift.
@@ -46,7 +46,7 @@ final class GlobalHotKey {
         )
         guard installStatus == noErr else { return nil }
 
-        let hotKeyID = EventHotKeyID(signature: OSType(0x474C_4E4B), id: 1) // 'GLNK'
+        let hotKeyID = EventHotKeyID(signature: OSType(0x5341_5054), id: 1) // 'SAPT'
         let registerStatus = RegisterEventHotKey(
             keyCode,
             modifiers,
