@@ -32,9 +32,9 @@ jobs:
           path: |
             .build
             ~/Library/Caches/org.swift.swiftpm
-          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          key: spm-${{ github.event.repository.name }}-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
           restore-keys: |
-            spm-${{ runner.os }}-
+            spm-${{ github.event.repository.name }}-${{ runner.os }}-
 
       - name: Build and bundle
         env:
