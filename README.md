@@ -34,7 +34,21 @@ model polishes the translation *if available*, but the app works fully without i
 - ⌨️ **Global hotkey** — `⌥⇧Space` from any app; the popover stays open across app and Space switches.
 - ⬇️ **In‑app updates** — checks GitHub Releases and offers the latest.
 
-## Install
+## Install with an AI agent
+
+Hand any AI agent (Cursor, Claude Code, …) a link to this repo and ask it to "set up
+Glasnik" — it follows [`AGENTS.md`](AGENTS.md). Or run the one‑line installer yourself; it
+cleans up any prior install, downloads the latest release, strips the Gatekeeper
+quarantine, installs to `/Applications`, and launches:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/pavstev/Glasnik/main/scripts/install.sh | bash
+```
+
+To fully reset first (uninstall + optionally delete history/model):
+`./scripts/cleanup.sh [--purge]`.
+
+## Install (manual)
 
 1. Download the latest **`Glasnik-x.y.z.zip`** from the
    [Releases page](https://github.com/pavstev/Glasnik/releases/latest) and unzip it.
@@ -119,6 +133,9 @@ Every push/PR to `main` is build‑checked + tested by [`ci.yml`](.github/workfl
 | --- | --- |
 | `Package.swift` | SwiftPM build (CLT, no Xcode) + test target |
 | `bundle.sh` | Builds + assembles & ad‑hoc signs `Glasnik.app` |
+| `AGENTS.md` | Setup instructions an AI agent follows to install the app |
+| `scripts/install.sh` | One‑line installer (cleanup → latest release → launch) |
+| `scripts/cleanup.sh` | Clean‑slate precondition (uninstall; `--purge` for history/model) |
 | `scripts/make-icon.swift` | Generates the ГG `Glasnik.icns` |
 | `project.yml` | Optional XcodeGen spec |
 | `.github/workflows/` | CI (build + test) and tag‑triggered release |
