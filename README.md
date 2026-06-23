@@ -74,6 +74,17 @@ ollama serve               # leave running
 When Ollama is running, `qwen2.5:3b` produces cleaner English and honors your tone +
 glossary. Without it, Glasnik falls back to Whisper's own translation.
 
+## Updating
+
+Glasnik checks GitHub Releases on launch (and via the **↻** button) and shows an
+"Update available" banner linking to the new release. To upgrade, click the banner, or
+just **re‑run the installer** — it always fetches the latest release and replaces the
+installed app in place:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/pavstev/Glasnik/main/scripts/install.sh | bash
+```
+
 ## How it works
 
 ```
