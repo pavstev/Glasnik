@@ -11,15 +11,19 @@ cd "$(dirname "$0")"
 APP_NAME="Glasnik"
 CONFIG="release"
 
-ARCH_FLAGS=()
+# Space-separated (not an array) so it's safe under macOS's bash 3.2, where
+# expanding an empty array with `set -u` errors out.
+ARCH_FLAGS=""
 if [[ "${GLASNIK_UNIVERSAL:-0}" == "1" ]]; then
-  ARCH_FLAGS=(--arch arm64 --arch x86_64)
+  ARCH_FLAGS="--arch arm64 --arch x86_64"
 fi
 
 echo "▶ Building (${CONFIG})…"
-swift build -c "${CONFIG}" "${ARCH_FLAGS[@]}"
+# shellcheck disable=SC2086  # intentional word-splitting of the flag list
+swift build -c "${CONFIG}" ${ARCH_FLAGS}
 
-BIN_DIR="$(swift build -c "${CONFIG}" "${ARCH_FLAGS[@]}" --show-bin-path)"
+# shellcheck disable=SC2086
+BIN_DIR="$(swift build -c "${CONFIG}" ${ARCH_FLAGS} --show-bin-path)"
 BIN="${BIN_DIR}/${APP_NAME}"
 if [[ ! -x "${BIN}" ]]; then
   echo "✗ Built binary not found at ${BIN}" >&2
