@@ -5,15 +5,15 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>Glasnik</string>
+    <string>Sapat</string>
     <key>CFBundleIdentifier</key>
-    <string>com.stevanpavlovic.Glasnik</string>
+    <string>com.stevanpavlovic.Sapat</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>Glasnik</string>
+    <string>Šapat</string>
     <key>CFBundleDisplayName</key>
-    <string>Glasnik</string>
+    <string>Šapat</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -28,10 +28,10 @@
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Glasnik records your voice so it can transcribe Serbian speech and translate it to English on your Mac.</string>
+    <string>Šapat records your voice so it can transcribe Serbian speech and translate it to English on your Mac.</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.productivity</string>
     <key>CFBundleIconFile</key>
-    <string>Glasnik</string>
+    <string>Sapat</string>
 </dict>
 </plist>

@@ -1,10 +1,10 @@
 # AGENTS.md — setup instructions for AI agents
 
-This file tells any AI agent (Cursor, Claude Code, Windsurf, …) how to set up Glasnik on
+This file tells any AI agent (Cursor, Claude Code, Windsurf, …) how to set up Šapat on
 a user's Mac. **If a user hands you a link to this repo and asks you to "install / set up
-Glasnik", follow the _Install_ section below — it's fully scripted.**
+Šapat", follow the _Install_ section below — it's fully scripted.**
 
-Glasnik is a macOS 14+ menu bar app: record Serbian → on-device WhisperKit transcription →
+Šapat is a macOS 14+ menu bar app: record Serbian → on-device WhisperKit transcription →
 English (Ollama polish when available). Distributed via GitHub Releases, ad-hoc signed.
 
 ## Install (do this when asked to set up the app)
@@ -14,21 +14,21 @@ Gatekeeper quarantine (the app is ad-hoc signed, not notarized), installs to
 `/Applications`, and launches it:
 
 ```sh
-git clone https://github.com/pavstev/Glasnik.git
-cd Glasnik
+git clone https://github.com/pavstev/Sapat.git
+cd Sapat
 ./scripts/install.sh
 ```
 
 No clone needed:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/pavstev/Glasnik/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/pavstev/Sapat/main/scripts/install.sh | bash
 ```
 
 Then tell the user:
 - On first launch macOS asks for **microphone** access — they must **Allow** it.
 - First launch downloads a **~2.9 GB** Whisper model (one time); the popover shows "Preparing model…".
-- The app lives in the **menu bar** (a **Г** glyph), with **no Dock icon**.
+- The app lives in the **menu bar** (a **Ш** glyph), with **no Dock icon**.
 - Default hotkey is **⌥⇧Space** (start/stop recording from anywhere).
 - *Optional*, for polished translations: `brew install ollama && ollama pull qwen2.5:3b && ollama serve`.
 
@@ -47,8 +47,8 @@ Requirements: macOS 14+, and `curl` + `python3` (preinstalled on macOS). Nothing
 
 ```sh
 xcode-select --install   # if the Command Line Tools aren't present
-./bundle.sh              # swift build + assemble & ad-hoc sign Glasnik.app
-open Glasnik.app
+./bundle.sh              # swift build + assemble & ad-hoc sign Sapat.app
+open Sapat.app
 ```
 
 ## Conventions & gotchas (if you edit the code)
@@ -70,18 +70,19 @@ state. To pick development back up on another Mac:
 1. **Prereqs:** macOS 14+, Command Line Tools (`xcode-select --install`), `git`, `gh`.
 2. **Identity:** `gh auth login` (GitHub account **pavstev**), then
    `git config user.name pavstev && git config user.email pavstev@users.noreply.github.com`.
-3. `git clone https://github.com/pavstev/Glasnik.git && cd Glasnik`
-4. Build + run: `./bundle.sh && open Glasnik.app` (first launch re-downloads the ~2.9 GB model).
+3. `git clone https://github.com/pavstev/Sapat.git && cd Sapat`
+4. Build + run: `./bundle.sh && open Sapat.app` (first launch re-downloads the ~2.9 GB model).
 5. Read the **Conventions & gotchas** above before editing. History is in the commit log;
    in-flight work is in GitHub issues/PRs.
 
-Identity facts: bundle id `com.stevanpavlovic.Glasnik`; no Apple Developer account
-(ad-hoc signing); no full Xcode (build via SwiftPM/CLT).
+Identity facts: bundle id `com.stevanpavlovic.Sapat`; no Apple Developer account
+(ad-hoc signing); no full Xcode (build via SwiftPM/CLT). Names, paths, and the repo slug
+all derive from `Sources/Brand.swift` — change identity there, not scattered literals.
 
 ## Project status & roadmap
 
-- **Shipped in v1.1:** searchable history, menu-bar waveform, tone & glossary, ГG icon +
-  Cyrillic Г menu-bar glyph, Swift 6 language mode, os.Logger, version-comparison tests,
+- **Shipped in v1.1:** searchable history, menu-bar waveform, tone & glossary, Ш icon +
+  Cyrillic Ш menu-bar glyph, Swift 6 language mode, os.Logger, version-comparison tests,
   and this agent/installer setup.
 - **Deferred backlog** (good next tasks): a quit-mid-transcription guard
   (`applicationShouldTerminate` while busy); a real download/transcribe progress bar wired

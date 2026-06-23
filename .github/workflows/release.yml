@@ -38,18 +38,18 @@ jobs:
 
       - name: Build and bundle
         env:
-          GLASNIK_VERSION: ${{ steps.version.outputs.version }}
+          SAPAT_VERSION: ${{ steps.version.outputs.version }}
         run: ./bundle.sh
 
       - name: Package zip
         run: |
-          ditto -c -k --sequesterRsrc --keepParent Glasnik.app "Glasnik-${{ steps.version.outputs.version }}.zip"
+          ditto -c -k --sequesterRsrc --keepParent Sapat.app "Sapat-${{ steps.version.outputs.version }}.zip"
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${GITHUB_REF_NAME}" \
-            "Glasnik-${{ steps.version.outputs.version }}.zip" \
-            --title "Glasnik ${GITHUB_REF_NAME}" \
+            "Sapat-${{ steps.version.outputs.version }}.zip" \
+            --title "Šapat ${GITHUB_REF_NAME}" \
             --generate-notes

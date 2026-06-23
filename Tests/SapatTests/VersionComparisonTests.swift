@@ -1,5 +1,5 @@
 import XCTest
-@testable import Glasnik
+@testable import Sapat
 
 final class VersionComparisonTests: XCTestCase {
     func testNewerWhenNumericallyGreater() {

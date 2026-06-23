@@ -31,9 +31,8 @@ final class HistoryStore {
     private let url: URL
 
     init() {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Glasnik", isDirectory: true)
-        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        let base = (try? Brand.applicationSupportDirectory())
+            ?? FileManager.default.temporaryDirectory
         url = base.appendingPathComponent("history.json")
         load()
     }

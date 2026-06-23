@@ -44,5 +44,5 @@ jobs:
 
       - name: Verify bundle
         run: |
-          codesign --verify --verbose=2 Glasnik.app
-          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" Glasnik.app/Contents/Info.plist
+          codesign --verify --verbose=2 Sapat.app
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" Sapat.app/Contents/Info.plist

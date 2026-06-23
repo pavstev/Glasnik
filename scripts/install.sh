@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# Installs the latest released Glasnik.app from GitHub Releases. Cleans up any prior
+# Installs the latest released Sapat.app from GitHub Releases. Cleans up any prior
 # install first, downloads the release, strips the Gatekeeper quarantine (the app is
 # ad-hoc signed), installs to /Applications, and launches. Safe to re-run.
 #
 #   ./scripts/install.sh
 # or, without cloning the repo:
-#   curl -fsSL https://raw.githubusercontent.com/pavstev/Glasnik/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/pavstev/Sapat/main/scripts/install.sh | bash
 set -euo pipefail
 
-REPO="pavstev/Glasnik"
-APP="/Applications/Glasnik.app"
+REPO="pavstev/Sapat"
+APP="/Applications/Sapat.app"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || true)"
 
 echo "▶ Cleaning up any prior install…"
 if [[ -n "$HERE" && -x "$HERE/cleanup.sh" ]]; then
   "$HERE/cleanup.sh" || true
 else
-  osascript -e 'tell application "Glasnik" to quit' >/dev/null 2>&1 || true
-  pkill -x Glasnik 2>/dev/null || true
+  osascript -e 'tell application "Sapat" to quit' >/dev/null 2>&1 || true
+  pkill -x Sapat 2>/dev/null || true
   rm -rf "$APP"
 fi
 
@@ -30,18 +30,18 @@ echo "  $asset_url"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 echo "▶ Downloading…"
-curl -fsSL "$asset_url" -o "$tmp/Glasnik.zip"
+curl -fsSL "$asset_url" -o "$tmp/Sapat.zip"
 echo "▶ Unzipping…"
-ditto -x -k "$tmp/Glasnik.zip" "$tmp"
+ditto -x -k "$tmp/Sapat.zip" "$tmp"
 echo "▶ Installing to /Applications…"
 rm -rf "$APP"
-cp -R "$tmp/Glasnik.app" "$APP"
+cp -R "$tmp/Sapat.app" "$APP"
 echo "▶ Removing quarantine (ad-hoc signed)…"
 xattr -dr com.apple.quarantine "$APP" 2>/dev/null || true
 
 echo "▶ Launching…"
 open "$APP"
 version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist" 2>/dev/null || echo "?")"
-echo "✓ Installed Glasnik ${version}. Look for the Г in your menu bar (no Dock icon)."
+echo "✓ Installed Šapat ${version}. Look for the Ш in your menu bar (no Dock icon)."
 echo "  First launch downloads the ~2.9 GB Whisper model and asks for the microphone — allow it."
 echo "  Optional polish: brew install ollama && ollama pull qwen2.5:3b && ollama serve"

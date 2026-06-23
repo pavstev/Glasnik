@@ -78,7 +78,7 @@ final class RecorderViewModel {
         let granted = await requestMicrophoneAccess()
         guard granted else {
             setState(.error(AppError(
-                message: "Microphone access denied. Glasnik needs the microphone to hear you.",
+                message: "Microphone access denied. Šapat needs the microphone to hear you.",
                 action: RecoveryAction(label: "Open Microphone Settings", kind: .openMicrophoneSettings)
             )))
             return
@@ -115,7 +115,7 @@ final class RecorderViewModel {
 
     /// Called by AppDelegate when the global hotkey couldn't be registered.
     func noteHotkeyUnavailable() {
-        flashNotice("Couldn't register \(GlasnikShortcut.display) — another app may be using it.")
+        flashNotice("Couldn't register \(SapatShortcut.display) — another app may be using it.")
     }
 
     func performRecoveryAction(_ action: RecoveryAction) {
@@ -141,8 +141,7 @@ final class RecorderViewModel {
     private func startRecording() {
         clearResults()
 
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("glasnik-recording.wav")
+        let url = Brand.temporaryRecordingURL
         try? FileManager.default.removeItem(at: url)
 
         // 16 kHz mono 16-bit PCM WAV — exactly what WhisperKit wants. AVAudioRecorder

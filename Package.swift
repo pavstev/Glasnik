@@ -1,31 +1,31 @@
 // swift-tools-version: 6.0
 import PackageDescription
 
-// SwiftPM build path — lets Glasnik build with just the Command Line Tools (no full
-// Xcode). `./bundle.sh` wraps the resulting binary into Glasnik.app. The Xcode route
+// SwiftPM build path — lets Šapat build with just the Command Line Tools (no full
+// Xcode). `./bundle.sh` wraps the resulting binary into Sapat.app. The Xcode route
 // via project.yml/XcodeGen still works too if you ever install Xcode.
 //
 // The global hotkey uses Carbon's RegisterEventHotKey directly (see GlobalHotKey.swift)
 // rather than the KeyboardShortcuts package, which relies on the #Preview macro plugin
 // that ships only with Xcode and so won't compile under CLT.
 let package = Package(
-    name: "Glasnik",
+    name: "Sapat",
     platforms: [.macOS(.v14)],
     dependencies: [
         .package(url: "https://github.com/argmaxinc/argmax-oss-swift", from: "1.0.0"),
     ],
     targets: [
         .executableTarget(
-            name: "Glasnik",
+            name: "Sapat",
             dependencies: [
                 .product(name: "WhisperKit", package: "argmax-oss-swift"),
             ],
             path: "Sources"
         ),
         .testTarget(
-            name: "GlasnikTests",
-            dependencies: ["Glasnik"],
-            path: "Tests/GlasnikTests"
+            name: "SapatTests",
+            dependencies: ["Sapat"],
+            path: "Tests/SapatTests"
         )
     ]
 )

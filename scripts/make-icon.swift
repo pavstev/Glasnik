@@ -1,9 +1,10 @@
 import AppKit
 import Foundation
 
-// Draws the Glasnik app icon — a "ГG" bilingual monogram (deep + light copper) on a
-// stone squircle — at every iconset size, then `iconutil` packs it into Glasnik.icns.
-// Run from the repo root: swift scripts/make-icon.swift
+// Draws the Šapat app icon — a copper Cyrillic "Ш" (the letter that opens "шапат",
+// whisper) on a stone squircle — at every iconset size, then `iconutil` packs it into
+// Resources/Sapat.icns. Run from the repo root:
+//   swift scripts/make-icon.swift && iconutil -c icns -o Resources/Sapat.icns Sapat.iconset
 
 let stone = NSColor(srgbRed: 0.137, green: 0.125, blue: 0.110, alpha: 1)        // #23201C
 let copperDeep = NSColor(srgbRed: 0.788, green: 0.494, blue: 0.278, alpha: 1)   // #C97E47
@@ -28,11 +29,9 @@ func drawIcon(pixels: Int) -> NSBitmapImageRep {
     stone.setFill()
     NSBezierPath(roundedRect: tile, xRadius: radius, yRadius: radius).fill()
 
-    let fontSize = side * 0.5
-    let font = NSFont.systemFont(ofSize: fontSize, weight: .semibold)
-    let text = NSMutableAttributedString()
-    text.append(NSAttributedString(string: "Г", attributes: [.font: font, .foregroundColor: copperDeep]))
-    text.append(NSAttributedString(string: "G", attributes: [.font: font, .foregroundColor: copperLight]))
+    let fontSize = side * 0.56
+    let font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
+    let text = NSAttributedString(string: "Ш", attributes: [.font: font, .foregroundColor: copperLight])
     let textSize = text.size()
     let origin = NSPoint(x: (s - textSize.width) / 2, y: (s - textSize.height) / 2 - s * 0.02)
     text.draw(at: origin)
@@ -50,11 +49,11 @@ let sizes: [(String, Int)] = [
 ]
 
 let fm = FileManager.default
-let iconset = URL(fileURLWithPath: "Glasnik.iconset")
+let iconset = URL(fileURLWithPath: "Sapat.iconset")
 try? fm.removeItem(at: iconset)
 try! fm.createDirectory(at: iconset, withIntermediateDirectories: true)
 for (name, px) in sizes {
     let data = drawIcon(pixels: px).representation(using: .png, properties: [:])!
     try! data.write(to: iconset.appendingPathComponent("\(name).png"))
 }
-print("Wrote Glasnik.iconset")
+print("Wrote Sapat.iconset")
