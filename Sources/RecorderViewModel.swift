@@ -10,7 +10,9 @@ import Observation
 @Observable
 final class RecorderViewModel {
     // MARK: Configuration
-    private let whisperModel = "openai_whisper-small"
+    // large-v3: the most accurate multilingual model — best for Serbian. Slower per
+    // clip than turbo, but the bake-off showed ~3x fewer word errors.
+    private let whisperModel = "openai_whisper-large-v3"
     private let sourceLanguage = "sr" // Serbian
 
     // MARK: Observed state (read by the view)
@@ -25,6 +27,9 @@ final class RecorderViewModel {
 
     /// Called on every state change so AppKit (the status-bar icon) can react.
     var onStateChange: ((AppState) -> Void)?
+
+    /// Set by AppDelegate so the popover's close (✕) button can dismiss it.
+    var onRequestClose: (() -> Void)?
 
     var isRecording: Bool {
         if case .recording = state { return true }
@@ -101,6 +106,11 @@ final class RecorderViewModel {
         Task { await prepare() }
     }
 
+    /// Called by AppDelegate when the global hotkey couldn't be registered.
+    func noteHotkeyUnavailable() {
+        flashNotice("Couldn't register \(GlasnikShortcut.display) — another app may be using it.")
+    }
+
     func performRecoveryAction(_ action: RecoveryAction) {
         switch action.kind {
         case .openMicrophoneSettings:
@@ -110,6 +120,13 @@ final class RecorderViewModel {
         case .copyCommand(let command):
             copyToPasteboard(command)
         }
+    }
+
+    /// Copies the current English translation to the clipboard (explicit Copy button).
+    func copyEnglish() {
+        guard !englishText.isEmpty else { return }
+        copyToPasteboard(englishText)
+        flashCopied()
     }
 
     // MARK: Recording
@@ -247,6 +264,7 @@ final class RecorderViewModel {
     }
 
     private func setState(_ newState: AppState) {
+        Log.recorder.info("state → \(String(describing: newState), privacy: .public)")
         state = newState
         onStateChange?(newState)
     }
@@ -271,8 +289,10 @@ final class RecorderViewModel {
     // MARK: Metering (drives the pulse)
 
     private func startMetering() {
+        // Timer fires on the main run loop and we're already on the main actor, so
+        // update directly instead of allocating a Task per tick (20 Hz).
         meterTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.updateLevel() }
+            MainActor.assumeIsolated { self?.updateLevel() }
         }
     }
 

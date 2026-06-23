@@ -27,7 +27,7 @@ but the app works fully without it.
    - run once: `xattr -dr com.apple.quarantine /Applications/Glasnik.app`
 4. Look for the **mic icon in the menu bar** (the app has no Dock icon).
 
-On first launch Glasnik downloads the `openai_whisper-small` model (~250 MB) from
+On first launch Glasnik downloads the `openai_whisper-large-v3-v20240930` (large-v3 turbo) model (~1.5 GB) from
 Hugging Face — the popover shows **"Preparing model…"** until it's ready, and macOS
 prompts once for microphone access.
 
@@ -111,9 +111,11 @@ Every push/PR to `main` is also build‑checked by
 
 ## Translation quality
 
-Whisper's offline translation quality scales with model size; bump `whisperModel` in
-`Sources/RecorderViewModel.swift` to `openai_whisper-large-v3` (~1.5 GB) for better
-offline results at the cost of a larger download and more latency.
+Transcription accuracy scales with model size. Glasnik defaults to
+`openai_whisper-large-v3-v20240930` (large-v3 turbo) — a strong balance of accuracy
+and speed for Serbian. For maximum accuracy, set `whisperModel` in
+`Sources/RecorderViewModel.swift` to `openai_whisper-large-v3`; for a smaller, faster
+download, use `openai_whisper-medium` or `openai_whisper-small`.
 
 ## Project layout
 
@@ -140,7 +142,7 @@ offline results at the cost of a larger download and more latency.
 
 - First run blocks on the model download; subsequent launches load from cache.
 - Releases are ad‑hoc signed (not notarized) — see the Gatekeeper step in **Install**.
-- The offline (Whisper‑small) translation is rougher than Ollama's polish.
+- The offline Whisper translation (no Ollama) is rougher than Ollama's polish.
 - Released binaries are arm64 (Apple Silicon); set `GLASNIK_UNIVERSAL=1` to build universal.
 - The global shortcut is fixed at ⌥⌘G for v1.
 - Bundle id: `com.stevanpavlovic.Glasnik`.

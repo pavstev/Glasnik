@@ -1,13 +1,14 @@
 import Carbon.HIToolbox
 
-/// The global shortcut: ⌥⌘G. Fixed for v1 (rebinding is a future enhancement).
+/// The global shortcut: ⌥⇧Space. Picked to dodge this machine's launcher/WM —
+/// Raycast owns ⌘Space and AeroSpace binds ⌥+letters/digits (but never ⌥⇧Space).
 enum GlasnikShortcut {
-    /// Carbon virtual key code for "G".
-    static let keyCode = UInt32(kVK_ANSI_G)
-    /// Carbon modifier mask: Command + Option.
-    static let modifiers = UInt32(cmdKey | optionKey)
+    /// Carbon virtual key code for the space bar.
+    static let keyCode = UInt32(kVK_Space)
+    /// Carbon modifier mask: Option + Shift.
+    static let modifiers = UInt32(optionKey | shiftKey)
     /// Human-readable form for the UI.
-    static let display = "⌥⌘G"
+    static let display = "⌥⇧Space"
 }
 
 /// Registers a system-wide hotkey via Carbon's `RegisterEventHotKey` — the same

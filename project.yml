@@ -29,7 +29,7 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         INFOPLIST_FILE: Info.plist
         GENERATE_INFOPLIST_FILE: NO
-        SWIFT_VERSION: "5.0"
+        SWIFT_VERSION: "6.0"
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         # Local-only, ad-hoc "Sign to Run Locally", non-sandboxed.
         CODE_SIGN_STYLE: Manual

@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Standard preferences window. For v1 the global shortcut is fixed (⌥⌘G); this
-/// surfaces it and a little about text. The same info also appears in the popover.
+/// Standard preferences window. Surfaces the global shortcut (⌥⇧Space) and a little
+/// about text. The same info also appears in the popover.
 struct SettingsView: View {
     var body: some View {
         Form {
