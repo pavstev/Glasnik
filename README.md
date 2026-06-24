@@ -46,7 +46,7 @@ any that leak). Tone presets and a glossary tune the result.
 - **Offline fallback** — Whisper's own translate task when LM Studio isn't running.
 - **Tone & glossary**, plus a configurable model id (Settings).
 - **Concise history** — searchable, with tap-to-expand rows.
-- **Global hotkey** `⌥⇧Space`; the menu bar **Ш** animates as a live waveform while recording.
+- **Global hotkey** `⌥⇧Space` to start/stop; **Esc** cancels a recording. The menu bar **Ш** animates as a live waveform while recording, with a live timer and first-run model-download progress in the popover.
 - **Automatic updates** — checks GitHub Releases, then downloads, checksum-verifies, swaps the bundle in place, and relaunches.
 
 ## Install

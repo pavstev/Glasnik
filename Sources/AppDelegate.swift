@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
     private var hotKey: GlobalHotKey?
+    private var escapeMonitor: Any?
 
     /// JSON-backed translation history, shared with the popover's HistoryView.
     private let historyStore = HistoryStore()
@@ -21,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configurePopover()
         configureStatusItem()
         registerHotkey()
+        installCancelShortcut()
 
         viewModel.onStateChange = { [weak self] state in
             self?.updateStatusIcon(for: state)
@@ -82,6 +84,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             viewModel.noteHotkeyUnavailable()
         } else {
             Log.app.info("Registered global hotkey \(SapatShortcut.display, privacy: .public)")
+        }
+    }
+
+    /// Escape cancels an in-progress recording (discarding it), or dismisses the popover
+    /// when it's focused and no text field is being edited. A *local* monitor only fires
+    /// while Šapat is the active app, so it never hijacks Escape system-wide.
+    private func installCancelShortcut() {
+        escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard event.keyCode == 53, let self else { return event } // 53 = Escape
+            // The local monitor fires on the main thread; touch main-actor state safely.
+            let handled = MainActor.assumeIsolated { () -> Bool in
+                if self.viewModel.isRecording {
+                    self.viewModel.cancelRecording()
+                    return true
+                }
+                let window = self.popover.contentViewController?.view.window
+                if self.popover.isShown, event.window === window,
+                   !(window?.firstResponder is NSText) {
+                    self.popover.performClose(nil)
+                    return true
+                }
+                return false
+            }
+            return handled ? nil : event // consume only when we acted
         }
     }
 

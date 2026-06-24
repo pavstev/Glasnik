@@ -104,6 +104,7 @@ struct PopoverView: View {
         VStack(spacing: Theme.s4) {
             recordButton
             statusLine
+            preparingProgress
             if let notice = vm.notice { noticeView(notice) }
             if case .done = vm.state {
                 resultCard
@@ -172,13 +173,38 @@ struct PopoverView: View {
 
     private var statusText: String {
         switch vm.state {
-        case .preparing: return "Preparing model… (one-time download)"
+        case .preparing(let progress):
+            if let progress, progress < 1 { return "Downloading model… \(Int(progress * 100))%" }
+            return "Loading model…"
         case .idle: return "Tap to record · \(SapatShortcut.display)"
-        case .recording: return "Recording… tap to stop"
+        case .recording: return "Recording \(recordingClock(vm.recordingDuration)) · Esc to cancel"
         case .transcribing: return "Transcribing…"
-        case .translating: return "Translating…"
+        case .translating: return "Refining…"
         case .done: return "Done"
         case .error: return "Something went wrong"
+        }
+    }
+
+    private func recordingClock(_ seconds: TimeInterval) -> String {
+        let total = Int(seconds)
+        return String(format: "%d:%02d", total / 60, total % 60)
+    }
+
+    /// First-run model download — a determinate bar with a one-time-cost caption.
+    @ViewBuilder private var preparingProgress: some View {
+        if case .preparing(let progress) = vm.state, let progress, progress < 1 {
+            VStack(spacing: Theme.s1 + 2) {
+                ProgressView(value: progress)
+                    .progressViewStyle(.linear)
+                    .tint(Theme.copper)
+                Text("First run downloads the speech model (~2.9 GB) — one time.")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textTertiary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(Theme.s3)
+            .cardSurface(Theme.rSmall)
+            .transition(.opacity)
         }
     }
 

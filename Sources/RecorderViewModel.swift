@@ -19,6 +19,7 @@ final class RecorderViewModel {
     private(set) var state: AppState = .preparing(progress: nil)
     private(set) var level: Double = 0 // mic level 0...1, drives the record-button pulse
     private(set) var levelHistory: [Double] = [] // recent levels for the menu-bar waveform
+    private(set) var recordingDuration: TimeInterval = 0 // elapsed seconds, shown while recording
     private(set) var serbianText = ""
     private(set) var englishText = ""
     private(set) var translationSource: TranslationSource?
@@ -85,7 +86,9 @@ final class RecorderViewModel {
         }
 
         do {
-            try await whisper.load(model: whisperModel)
+            try await whisper.load(model: whisperModel) { [weak self] fraction in
+                Task { @MainActor in self?.setPreparingProgress(fraction) }
+            }
             setState(.idle)
         } catch {
             setState(.error(AppError(
@@ -93,6 +96,13 @@ final class RecorderViewModel {
                 action: nil
             )))
         }
+    }
+
+    /// Lightweight progress update during the first-run model download. Skips the
+    /// status-bar/log churn of `setState` since it can fire many times a second.
+    private func setPreparingProgress(_ fraction: Double) {
+        guard case .preparing = state else { return }
+        state = .preparing(progress: fraction)
     }
 
     // MARK: Intent
@@ -107,6 +117,22 @@ final class RecorderViewModel {
         default:
             break
         }
+    }
+
+    /// Discards an in-progress recording without transcribing it (Esc / Cancel button).
+    func cancelRecording() {
+        guard case .recording = state else { return }
+        stopMetering()
+        recorder?.stop()
+        recorder = nil
+        level = 0
+        levelHistory = []
+        recordingDuration = 0
+        if let url = recordingURL { try? FileManager.default.removeItem(at: url) }
+        recordingURL = nil
+        clearResults()
+        setState(.idle)
+        flashNotice("Recording canceled")
     }
 
     func retryAfterError() {
@@ -171,6 +197,7 @@ final class RecorderViewModel {
             }
             self.recorder = recorder
             recordingURL = url
+            recordingDuration = 0
             setState(.recording)
             startMetering()
         } catch {
@@ -188,6 +215,7 @@ final class RecorderViewModel {
         recorder = nil
         level = 0
         levelHistory = []
+        recordingDuration = 0
 
         guard let url = recordingURL, duration > 0.3 else {
             flashNotice("No speech detected — try again")
@@ -332,6 +360,7 @@ final class RecorderViewModel {
         level = Double(max(0, min(1, (power + 55) / 55)))
         levelHistory.append(level)
         if levelHistory.count > 18 { levelHistory.removeFirst(levelHistory.count - 18) }
+        recordingDuration = recorder.currentTime
         onLevelChange?(levelHistory)
     }
 

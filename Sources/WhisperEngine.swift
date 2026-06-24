@@ -12,13 +12,20 @@ actor WhisperEngine {
 
     var isLoaded: Bool { pipe != nil }
 
-    /// Loads and prewarms the model, downloading it from Hugging Face on first run
-    /// (~2.9 GB for `openai_whisper-large-v3`). Blocks until the model is ready.
-    func load(model: String) async throws {
+    /// Locates the model (downloading it from Hugging Face on first run, ~2.9 GB for
+    /// `openai_whisper-large-v3`) and prewarms it. `onDownloadProgress` reports the
+    /// download fraction (0–1); it only ticks on first run — a cached model resolves
+    /// instantly and prewarm proceeds straight to loading.
+    func load(model: String, onDownloadProgress: @escaping @Sendable (Double) -> Void) async throws {
         guard pipe == nil else { return }
-        Log.whisper.info("Loading model \(model, privacy: .public)")
+        Log.whisper.info("Locating model \(model, privacy: .public)")
+        let folder = try await WhisperKit.download(variant: model) { progress in
+            onDownloadProgress(progress.fractionCompleted)
+        }
+        Log.whisper.info("Loading + prewarming model")
         // prewarm: true runs warm-up at load so the FIRST transcription isn't slow.
-        pipe = try await WhisperKit(WhisperKitConfig(model: model, prewarm: true))
+        // download: false — we already have the local folder from the step above.
+        pipe = try await WhisperKit(WhisperKitConfig(model: model, modelFolder: folder.path, prewarm: true, download: false))
         Log.whisper.info("Model ready")
     }
 
