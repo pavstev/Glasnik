@@ -242,8 +242,8 @@ struct PopoverView: View {
 
     private var copyBar: some View {
         HStack(spacing: Theme.s2) {
-            if vm.translationSource == .ollama {
-                Label("polished by Ollama", systemImage: "sparkles")
+            if vm.translationSource == .lmStudio {
+                Label("refined by LM Studio", systemImage: "sparkles")
                     .font(.caption2)
                     .foregroundStyle(Theme.textTertiary)
                     .labelStyle(.titleAndIcon)

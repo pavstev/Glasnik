@@ -5,7 +5,7 @@ a user's Mac. **If a user hands you a link to this repo and asks you to "install
 Šapat", follow the _Install_ section below — it's fully scripted.**
 
 Šapat is a macOS 14+ menu bar app: record Serbian → on-device WhisperKit transcription →
-English (Ollama polish when available). Distributed via GitHub Releases, ad-hoc signed.
+English (LM Studio refinement when available). Distributed via GitHub Releases, ad-hoc signed.
 
 ## Install (do this when asked to set up the app)
 
@@ -30,7 +30,7 @@ Then tell the user:
 - First launch downloads a **~2.9 GB** Whisper model (one time); the popover shows "Preparing model…".
 - The app lives in the **menu bar** (a **Ш** glyph), with **no Dock icon**.
 - Default hotkey is **⌥⇧Space** (start/stop recording from anywhere).
-- *Optional*, for polished translations: `brew install ollama && ollama pull qwen2.5:3b && ollama serve`.
+- *Optional*, for refined translations: `brew install --cask lm-studio && lms get qwen3-8b --mlx && lms server start` (OpenAI-compatible API on :1234).
 
 Requirements: macOS 14+, and `curl` + `python3` (preinstalled on macOS). Nothing else.
 
@@ -58,6 +58,8 @@ open Sapat.app
   This already bit `SwiftData` (`@Model`/`@Query`), Swift Testing (`import Testing`), and
   `#Preview`. (History therefore uses a JSON store; tests use `XCTest` and run in CI.)
 - **Swift 6 language mode is on** — preserve the `actor` / `@MainActor` isolation.
+- Refinement is via LM Studio's OpenAI-compatible API (`:1234`); `LMStudioClient` works with
+  any OpenAI-compatible local server and falls back to Whisper's offline translate when down.
 - Global hotkey is **⌥⇧Space** via Carbon `RegisterEventHotKey`.
 - Ad-hoc signed, non-sandboxed, local-only. Releases are tag-triggered: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 - Always verify a change with `./bundle.sh` then launch — it's a menu-bar agent (no Dock icon).
@@ -81,12 +83,13 @@ all derive from `Sources/Brand.swift` — change identity there, not scattered l
 
 ## Project status & roadmap
 
-- **Shipped in v1.1:** searchable history, menu-bar waveform, tone & glossary, Ш icon +
-  Cyrillic Ш menu-bar glyph, Swift 6 language mode, os.Logger, version-comparison tests,
-  and this agent/installer setup.
+- **Shipped:** Šapat rebrand (name/icon/bundle/repo from `Brand.swift`), copper-on-stone UI,
+  automatic GitHub updates (download → checksum-verify → in-place swap → relaunch), concise
+  collapsible history, LM Studio (Qwen3-8B MLX) refinement with a dedup / no-fabrication /
+  output-only prompt + conservative sanitizer, and long-form VAD silence tuning.
 - **Deferred backlog** (good next tasks): a quit-mid-transcription guard
   (`applicationShouldTerminate` while busy); a real download/transcribe progress bar wired
   into `AppState.preparing(progress:)`; load the recorded audio once to avoid a second
-  WhisperKit encode on the Ollama-down fallback path.
+  WhisperKit encode on the LM-Studio-down fallback path.
 - **Cut a release:** `git tag vX.Y.Z && git push origin vX.Y.Z` → CI builds + publishes the
   GitHub Release; the in-app updater and `scripts/install.sh` pick it up automatically.

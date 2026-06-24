@@ -31,4 +31,4 @@ if [[ $PURGE -eq 1 ]]; then
   rm -rf "$HOME/Documents/huggingface/models/argmaxinc/whisperkit-coreml/openai_whisper-large-v3"
 fi
 
-echo "✓ Clean slate. (Ollama, if installed, is left untouched.)"
+echo "✓ Clean slate. (LM Studio, if installed, is left untouched.)"

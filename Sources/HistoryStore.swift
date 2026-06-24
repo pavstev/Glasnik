@@ -8,7 +8,7 @@ struct TranslationRecord: Codable, Identifiable, Equatable {
     let serbian: String
     let english: String
     let model: String
-    let source: String // "Ollama" or "Whisper"
+    let source: String // "LM Studio" or "Whisper"
 
     init(id: UUID = UUID(), date: Date, serbian: String, english: String, model: String, source: String) {
         self.id = id

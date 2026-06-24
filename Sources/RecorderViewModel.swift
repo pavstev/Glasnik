@@ -57,7 +57,7 @@ final class RecorderViewModel {
 
     // MARK: Dependencies
     private let whisper = WhisperEngine()
-    private let ollama = OllamaClient()
+    private let llm = LMStudioClient()
 
     /// Translation history store; set by AppDelegate.
     var history: HistoryStore?
@@ -123,6 +123,13 @@ final class RecorderViewModel {
         case .openMicrophoneSettings:
             if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
                 NSWorkspace.shared.open(url)
+            }
+        case .openLMStudio:
+            let appURL = URL(fileURLWithPath: "/Applications/LM Studio.app")
+            if FileManager.default.fileExists(atPath: appURL.path) {
+                NSWorkspace.shared.open(appURL)
+            } else if let site = URL(string: "https://lmstudio.ai") {
+                NSWorkspace.shared.open(site)
             }
         case .copyCommand(let command):
             copyToPasteboard(command)
@@ -203,16 +210,16 @@ final class RecorderViewModel {
 
             setState(.translating)
             do {
-                // Preferred path: the LLM translates the Serbian source directly,
-                // honoring the user's tone + glossary preferences.
-                let english = try await ollama.translate(
+                // Preferred path: the local LM Studio model refines the Serbian source
+                // directly, honoring the user's tone + glossary preferences.
+                let english = try await llm.translate(
                     serbian,
                     tone: TranslationPreferences.tone,
                     glossary: TranslationPreferences.glossary
                 )
-                finish(english: english, source: .ollama, hint: nil)
+                finish(english: english, source: .lmStudio, hint: nil)
             } catch {
-                // Ollama unavailable — fall back to Whisper's own translate task.
+                // LM Studio unavailable — fall back to Whisper's own translate task.
                 let english = try await whisper.run(audioPath: url.path, task: .translate, language: sourceLanguage)
                 finish(english: english, source: .whisperFallback, hint: fallbackHint(for: error))
             }
@@ -244,29 +251,29 @@ final class RecorderViewModel {
             serbian: serbian,
             english: english,
             model: whisperModel,
-            source: source == .ollama ? "Ollama" : "Whisper"
+            source: source == .lmStudio ? "LM Studio" : "Whisper"
         )
     }
 
     // MARK: Helpers
 
     private func fallbackHint(for error: Error) -> AppHint {
-        guard let ollamaError = error as? OllamaError else {
+        guard let lmStudioError = error as? LMStudioError else {
             return AppHint(message: "Translated offline by Whisper.", action: nil)
         }
-        switch ollamaError {
+        switch lmStudioError {
         case .notRunning:
             return AppHint(
-                message: "Translated offline by Whisper. Start Ollama for polished output.",
-                action: RecoveryAction(label: "Copy “ollama serve”", kind: .copyCommand("ollama serve"))
+                message: "Translated offline by Whisper. Start LM Studio’s server for refined output.",
+                action: RecoveryAction(label: "Open LM Studio", kind: .openLMStudio)
             )
-        case .modelNotFound:
+        case .modelNotLoaded:
             return AppHint(
-                message: "Translated offline by Whisper. Pull qwen2.5:3b for polished output.",
-                action: RecoveryAction(label: "Copy “ollama pull qwen2.5:3b”", kind: .copyCommand("ollama pull qwen2.5:3b"))
+                message: "Translated offline by Whisper. Load a model in LM Studio for refined output.",
+                action: RecoveryAction(label: "Open LM Studio", kind: .openLMStudio)
             )
         case .other(let message):
-            return AppHint(message: "Translated offline by Whisper. (Ollama: \(message))", action: nil)
+            return AppHint(message: "Translated offline by Whisper. (LM Studio: \(message))", action: nil)
         }
     }
 

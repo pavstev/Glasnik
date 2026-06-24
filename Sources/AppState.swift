@@ -22,7 +22,7 @@ struct AppError: Equatable {
 }
 
 /// A non-blocking hint shown alongside a successful result — used when we fell back
-/// to offline Whisper translation because Ollama wasn't available.
+/// to offline Whisper translation because LM Studio wasn't available.
 struct AppHint: Equatable {
     var message: String
     var action: RecoveryAction?
@@ -32,6 +32,7 @@ struct AppHint: Equatable {
 struct RecoveryAction: Equatable {
     enum Kind: Equatable {
         case openMicrophoneSettings
+        case openLMStudio
         case copyCommand(String)
     }
 
@@ -41,6 +42,6 @@ struct RecoveryAction: Equatable {
 
 /// Which engine produced the English translation.
 enum TranslationSource: Equatable {
-    case ollama          // polished by the local LLM
+    case lmStudio        // refined by the local LM Studio model
     case whisperFallback // Whisper's own translate task (offline baseline)
 }
