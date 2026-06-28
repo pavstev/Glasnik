@@ -5,7 +5,7 @@ a user's Mac. **If a user hands you a link to this repo and asks you to "install
 Šapat", follow the _Install_ section below — it's fully scripted.**
 
 Šapat is a macOS 14+ menu bar app: record Serbian → on-device WhisperKit transcription →
-English (LM Studio refinement when available). Distributed via GitHub Releases, ad-hoc signed.
+English (LM Studio refinement, required and auto-managed). Distributed via GitHub Releases, ad-hoc signed.
 
 ## Install (do this when asked to set up the app)
 
@@ -30,9 +30,9 @@ Then tell the user:
 - First launch downloads a **~2.9 GB** Whisper model (one time); the popover shows "Preparing model…".
 - The app lives in the **menu bar** (a **Ш** glyph), with **no Dock icon**.
 - Default hotkey is **⌥⇧Space** (start/stop recording from anywhere).
-- *Optional*, for refined translations: `brew install --cask lm-studio && lms get qwen3-8b --mlx && lms server start` (OpenAI-compatible API on :1234).
+- **Required** for refined translations: install LM Studio and its `lms` CLI — `brew install --cask lm-studio`, then in LM Studio enable the command-line tool ("Install `lms`"). Šapat then starts the server (:1234) and downloads + loads the model (`qwen/qwen3-8b` MLX, ~5 GB) itself on launch — no manual `lms get`/`server start` needed. Without LM Studio there is no fallback: the transcript is shown with a Retry.
 
-Requirements: macOS 14+, and `curl` + `python3` (preinstalled on macOS). Nothing else.
+Requirements: macOS 14+, `curl` + `python3` (preinstalled on macOS), and LM Studio + `lms` for refinement.
 
 ## Clean slate (precondition)
 
@@ -58,8 +58,12 @@ open Sapat.app
   This already bit `SwiftData` (`@Model`/`@Query`), Swift Testing (`import Testing`), and
   `#Preview`. (History therefore uses a JSON store; tests use `XCTest` and run in CI.)
 - **Swift 6 language mode is on** — preserve the `actor` / `@MainActor` isolation.
-- Refinement is via LM Studio's OpenAI-compatible API (`:1234`); `LMStudioClient` works with
-  any OpenAI-compatible local server and falls back to Whisper's offline translate when down.
+- Refinement is **required** and LM-Studio-only (no Whisper fallback). `LMStudioManager`
+  drives the `lms` CLI to start the server + download/load the model; `LMStudioClient` reads
+  the loaded context length from the native `/api/v0/models` and, when a transcript won't
+  fit, splits it (`TranscriptChunker`), refines each piece, and merges — so the start of a
+  long recording is never silently truncated. When LM Studio can't be made ready the
+  transcript is kept on screen with Retry + Open LM Studio.
 - Global hotkey is **⌥⇧Space** via Carbon `RegisterEventHotKey`.
 - Ad-hoc signed, non-sandboxed, local-only. Releases are tag-triggered: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 - Always verify a change with `./bundle.sh` then launch — it's a menu-bar agent (no Dock icon).
@@ -86,10 +90,12 @@ all derive from `Sources/Brand.swift` — change identity there, not scattered l
 - **Shipped:** Šapat rebrand (name/icon/bundle/repo from `Brand.swift`), copper-on-stone UI,
   automatic GitHub updates (download → checksum-verify → in-place swap → relaunch), concise
   collapsible history, LM Studio (Qwen3-8B MLX) refinement with a dedup / no-fabrication /
-  output-only prompt + conservative sanitizer, and long-form VAD silence tuning.
+  output-only prompt + conservative sanitizer, long-form VAD silence tuning, mandatory
+  auto-managed LM Studio (server + model via the `lms` CLI), and whole-transcript
+  chunk-and-merge refinement so long recordings aren't truncated.
 - **Deferred backlog** (good next tasks): a quit-mid-transcription guard
   (`applicationShouldTerminate` while busy); a real download/transcribe progress bar wired
-  into `AppState.preparing(progress:)`; load the recorded audio once to avoid a second
-  WhisperKit encode on the LM-Studio-down fallback path.
+  into `AppState.preparing(progress:)`; parse `lms get` progress into a percentage for the
+  warm-up status row.
 - **Cut a release:** `git tag vX.Y.Z && git push origin vX.Y.Z` → CI builds + publishes the
   GitHub Release; the in-app updater and `scripts/install.sh` pick it up automatically.

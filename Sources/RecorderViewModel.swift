@@ -23,8 +23,9 @@ final class RecorderViewModel {
     private(set) var serbianText = ""
     private(set) var englishText = ""
     private(set) var translationSource: TranslationSource?
-    private(set) var hint: AppHint?
     private(set) var notice: String? // transient info, e.g. "No speech detected"
+    /// Non-nil while LM Studio is being made ready (server start / model download / load).
+    private(set) var lmStudioStatus: String?
     private(set) var showCopiedConfirmation = false
 
     /// Called on every state change so AppKit (the status-bar icon) can react.
@@ -58,7 +59,11 @@ final class RecorderViewModel {
 
     // MARK: Dependencies
     private let whisper = WhisperEngine()
-    private let llm = LMStudioClient()
+    private var llm = LMStudioClient()
+    private let lmStudio = LMStudioManager()
+    /// Coalesces concurrent readiness work (the launch warm-up and a refine) so we never
+    /// run two `lms` downloads/loads at once.
+    private var readinessTask: Task<Void, Error>?
 
     /// Translation history store; set by AppDelegate.
     var history: HistoryStore?
@@ -90,11 +95,27 @@ final class RecorderViewModel {
                 Task { @MainActor in self?.setPreparingProgress(fraction) }
             }
             setState(.idle)
+            warmUpLMStudio()
         } catch {
             setState(.error(AppError(
                 message: "Couldn't load the speech model. \(error.localizedDescription)",
                 action: nil
             )))
+        }
+    }
+
+    /// Best-effort, non-blocking: at launch we get LM Studio fully ready (server up, model
+    /// downloaded + loaded) so the first refinement is instant. Failures here are silent —
+    /// the refine path runs the same readiness check and surfaces a real error only if a
+    /// recording actually needs LM Studio and it still can't be made ready.
+    private func warmUpLMStudio() {
+        Task { [weak self] in
+            do {
+                try await self?.ensureLMStudioReady()
+            } catch {
+                Log.llm.info("LM Studio warm-up deferred: \(error.localizedDescription, privacy: .public)")
+                self?.setLMStudioStatus(nil)
+            }
         }
     }
 
@@ -135,8 +156,14 @@ final class RecorderViewModel {
         flashNotice("Recording canceled")
     }
 
+    /// "Retry" after an error: re-refine the existing transcript when we have one (an LM
+    /// Studio hiccup), otherwise re-run the launch preparation.
     func retryAfterError() {
-        Task { await prepare() }
+        if !serbianText.isEmpty {
+            Task { await refine() }
+        } else {
+            Task { await prepare() }
+        }
     }
 
     /// Called by AppDelegate when the global hotkey couldn't be registered.
@@ -222,86 +249,133 @@ final class RecorderViewModel {
             setState(.idle)
             return
         }
-        Task { await process(url: url) }
+        Task { await transcribeAndRefine(url: url) }
     }
 
-    private func process(url: URL) async {
+    private func transcribeAndRefine(url: URL) async {
         setState(.transcribing)
+        let serbian: String
         do {
-            let serbian = try await whisper.run(audioPath: url.path, task: .transcribe, language: sourceLanguage)
-            guard isMeaningful(serbian) else {
-                flashNotice("No speech detected — try again")
-                setState(.idle)
-                return
-            }
-            serbianText = serbian
-
-            setState(.translating)
-            do {
-                // Preferred path: the local LM Studio model refines the Serbian source
-                // directly, honoring the user's tone + glossary preferences.
-                let english = try await llm.translate(
-                    serbian,
-                    tone: TranslationPreferences.tone,
-                    glossary: TranslationPreferences.glossary
-                )
-                finish(english: english, source: .lmStudio, hint: nil)
-            } catch {
-                // LM Studio unavailable — fall back to Whisper's own translate task.
-                let english = try await whisper.run(audioPath: url.path, task: .translate, language: sourceLanguage)
-                finish(english: english, source: .whisperFallback, hint: fallbackHint(for: error))
-            }
+            serbian = try await whisper.run(audioPath: url.path, task: .transcribe, language: sourceLanguage)
         } catch {
             setState(.error(AppError(
                 message: "Transcription failed. \(error.localizedDescription)",
                 action: nil
             )))
+            return
+        }
+        guard isMeaningful(serbian) else {
+            flashNotice("No speech detected — try again")
+            setState(.idle)
+            return
+        }
+        serbianText = serbian
+        await refine()
+    }
+
+    /// Refines the current `serbianText` into English with LM Studio — the only path now
+    /// (no Whisper fallback). LM Studio is made ready first; on failure the transcript
+    /// stays on screen and the error offers Retry + Open LM Studio, so nothing the speaker
+    /// said is lost.
+    private func refine() async {
+        guard !serbianText.isEmpty else { return }
+        setState(.translating)
+        do {
+            try await ensureLMStudioReady()
+            let english = try await llm.refine(
+                serbianText,
+                tone: TranslationPreferences.tone,
+                glossary: TranslationPreferences.glossary
+            )
+            finish(english: english)
+        } catch is CancellationError {
+            setLMStudioStatus(nil)
+            setState(.idle)
+        } catch {
+            setLMStudioStatus(nil)
+            setState(.error(lmStudioError(for: error)))
         }
     }
 
-    private func finish(english: String, source: TranslationSource, hint: AppHint?) {
+    /// Ensures the server is up and the configured model is loaded, coalescing a concurrent
+    /// launch warm-up so two `lms` downloads/loads never run at once. The off-main readiness
+    /// work reports progress through an `AsyncStream` (it can't touch main-actor state
+    /// directly), which we drain here to update `lmStudioStatus`.
+    private func ensureLMStudioReady() async throws {
+        llm.model = TranslationPreferences.model
+        if let existing = readinessTask {
+            try await existing.value
+            return
+        }
+
+        let client = llm
+        let manager = lmStudio
+        let modelKey = TranslationPreferences.model
+        let (phases, continuation) = AsyncStream<LMStudioManager.Phase>.makeStream()
+
+        let task = Task.detached {
+            defer { continuation.finish() }
+            try await manager.ensureReady(modelKey: modelKey, client: client) { phase in
+                continuation.yield(phase)
+            }
+        }
+        readinessTask = task
+        // Clear on every exit (success, throw, or this awaiting task being cancelled) so a
+        // failed warm-up never pins a dead task that later callers would await forever.
+        defer {
+            readinessTask = nil
+            setLMStudioStatus(nil)
+        }
+
+        for await phase in phases { setLMStudioStatus(phase.message) }
+        try await task.value // re-throws any setup failure to the caller
+    }
+
+    private func finish(english: String) {
         let cleaned = english.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else {
             setState(.error(AppError(message: "The translation came back empty.", action: nil)))
             return
         }
         englishText = cleaned
-        translationSource = source
-        self.hint = hint
+        translationSource = .lmStudio
         copyToPasteboard(cleaned)
         flashCopied()
         setState(.done)
-        saveToHistory(serbian: serbianText, english: cleaned, source: source)
+        saveToHistory(serbian: serbianText, english: cleaned)
     }
 
-    private func saveToHistory(serbian: String, english: String, source: TranslationSource) {
-        history?.add(
-            serbian: serbian,
-            english: english,
-            model: whisperModel,
-            source: source == .lmStudio ? "LM Studio" : "Whisper"
-        )
+    private func saveToHistory(serbian: String, english: String) {
+        history?.add(serbian: serbian, english: english, model: whisperModel, source: "LM Studio")
     }
 
     // MARK: Helpers
 
-    private func fallbackHint(for error: Error) -> AppHint {
-        guard let lmStudioError = error as? LMStudioError else {
-            return AppHint(message: "Translated offline by Whisper.", action: nil)
+    private func setLMStudioStatus(_ status: String?) {
+        lmStudioStatus = status
+    }
+
+    /// Turns an LM Studio failure into a user-facing error that keeps the transcript on
+    /// screen and offers a way to fix things (Retry re-refines; the action opens LM Studio).
+    private func lmStudioError(for error: Error) -> AppError {
+        let openLMStudio = RecoveryAction(label: "Open LM Studio", kind: .openLMStudio)
+        guard let lmError = error as? LMStudioError else {
+            return AppError(message: "Couldn't refine the translation. \(error.localizedDescription)", action: openLMStudio)
         }
-        switch lmStudioError {
+        switch lmError {
+        case .cliNotFound:
+            return AppError(
+                message: "LM Studio's command-line tool (lms) isn't installed, so the translation can't be refined. In LM Studio run “Install lms” (or `npx lmstudio install-cli`), then Retry.",
+                action: openLMStudio
+            )
         case .notRunning:
-            return AppHint(
-                message: "Translated offline by Whisper. Start LM Studio’s server for refined output.",
-                action: RecoveryAction(label: "Open LM Studio", kind: .openLMStudio)
-            )
+            return AppError(message: "LM Studio isn't running. Start it, then Retry.", action: openLMStudio)
         case .modelNotLoaded:
-            return AppHint(
-                message: "Translated offline by Whisper. Load a model in LM Studio for refined output.",
-                action: RecoveryAction(label: "Open LM Studio", kind: .openLMStudio)
-            )
+            return AppError(message: "No model is loaded in LM Studio. Load \(TranslationPreferences.model), then Retry.", action: openLMStudio)
+        case .setupFailed(let message):
+            return AppError(message: "Couldn't get LM Studio ready: \(message)", action: openLMStudio)
         case .other(let message):
-            return AppHint(message: "Translated offline by Whisper. (LM Studio: \(message))", action: nil)
+            return AppError(message: "LM Studio couldn't refine the translation: \(message)", action: openLMStudio)
         }
     }
 
@@ -316,7 +390,6 @@ final class RecorderViewModel {
         serbianText = ""
         englishText = ""
         translationSource = nil
-        hint = nil
         notice = nil
     }
 

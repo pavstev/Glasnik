@@ -22,14 +22,14 @@ struct SettingsView: View {
                         .font(.callout)
                         .frame(height: 80)
                         .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
-                    Text("One term per line, e.g. “Đorđe = George”. Applied when LM Studio is running.")
+                    Text("One term per line, e.g. “Đorđe = George”. Applied to every refinement.")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
             }
             Section("Local model (LM Studio)") {
                 TextField("Model", text: $model, prompt: Text(TranslationPreferences.defaultModel))
-                Text("The model id loaded in LM Studio’s OpenAI-compatible server (port 1234). Leave blank to use \(TranslationPreferences.defaultModel).")
+                Text("The model Šapat refines with. On launch it starts LM Studio’s server (port 1234) and downloads + loads this model automatically. Leave blank to use \(TranslationPreferences.defaultModel). Requires LM Studio and its `lms` command-line tool.")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -37,7 +37,7 @@ struct SettingsView: View {
                 LabeledContent("Record toggle", value: SapatShortcut.display)
             }
             Section("About") {
-                Text("\(Brand.displayName) — record Serbian, get clean, precise English. On-device transcription with WhisperKit; optional local refinement with LM Studio.")
+                Text("\(Brand.displayName) — record Serbian, get clean, precise English. On-device transcription with WhisperKit; local refinement with LM Studio.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

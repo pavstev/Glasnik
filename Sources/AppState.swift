@@ -21,13 +21,6 @@ struct AppError: Equatable {
     var action: RecoveryAction?
 }
 
-/// A non-blocking hint shown alongside a successful result — used when we fell back
-/// to offline Whisper translation because LM Studio wasn't available.
-struct AppHint: Equatable {
-    var message: String
-    var action: RecoveryAction?
-}
-
 /// A button the popover can render to help the user recover or improve the result.
 struct RecoveryAction: Equatable {
     enum Kind: Equatable {
@@ -40,8 +33,8 @@ struct RecoveryAction: Equatable {
     var kind: Kind
 }
 
-/// Which engine produced the English translation.
+/// Which engine produced the English translation. LM Studio is now the only path; kept as
+/// an enum so the result card can label provenance and to leave room for future engines.
 enum TranslationSource: Equatable {
-    case lmStudio        // refined by the local LM Studio model
-    case whisperFallback // Whisper's own translate task (offline baseline)
+    case lmStudio // refined by the local LM Studio model
 }

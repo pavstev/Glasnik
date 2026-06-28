@@ -28,9 +28,10 @@ to your clipboard. Everything runs on your Mac.
 ```
 record (16 kHz mono WAV)
    └─ WhisperKit large-v3 (Serbian, VAD)  ──▶  transcript          quiet pauses are skipped,
-        └─ refine:                                                  long monologues stay accurate
-             ├─ LM Studio · Qwen3-8B (MLX)  ──▶  clean English      preferred: dedup + formalize
-             └─ WhisperKit translate        ──▶  English baseline   offline fallback
+        └─ refine with LM Studio · Qwen3-8B (MLX):                  long monologues stay accurate
+             ├─ fits the model's context  ──▶  one pass            dedup + formalize
+             └─ too long for context      ──▶  split → refine →     every part is refined, then
+                                                merge               merged so nothing is dropped
    └─ show both, auto-copy English, save to history
 ```
 
@@ -43,7 +44,8 @@ any that leak). Tone presets and a glossary tune the result.
 
 - **On-device transcription** — WhisperKit `large-v3` with VAD silence handling, tuned for long, pause-heavy monologues (5–10 min).
 - **Local refinement** — LM Studio (`qwen/qwen3-8b`, MLX) deduplicates and formalizes into concise English without fabricating; output-only.
-- **Offline fallback** — Whisper's own translate task when LM Studio isn't running.
+- **Whole-recording guarantee** — long transcripts that exceed the model's context are split on sentence boundaries, refined piece by piece, then merged + de-duped, so the **beginning is never silently dropped**.
+- **Auto-managed LM Studio** — on launch Šapat starts LM Studio's server and downloads + loads the model itself; if it can't, the transcript stays on screen with a clear Retry.
 - **Tone & glossary**, plus a configurable model id (Settings).
 - **Concise history** — searchable, with tap-to-expand rows.
 - **Global hotkey** `⌥⇧Space` to start/stop; **Esc** cancels a recording. The menu bar **Ш** animates as a live waveform while recording, with a live timer and first-run model-download progress in the popover.
@@ -61,17 +63,18 @@ Cleans up any prior install, downloads the latest release, strips the Gatekeeper
 the `large-v3` model (~2.9 GB) and asks once for the microphone. Reset with
 `./scripts/cleanup.sh [--purge]`.
 
-### Local refinement with LM Studio
+### Local refinement with LM Studio (required)
 
 ```sh
 brew install --cask lm-studio        # or download from https://lmstudio.ai
-lms get qwen3-8b --mlx               # MLX build, strong Serbian + instruction-following
-lms server start                     # OpenAI-compatible API on :1234
+#  then, once, in LM Studio: install the `lms` command-line tool
 ```
 
-Without LM Studio, Šapat falls back to Whisper's offline translation. The model id is set in
-Settings (default `qwen/qwen3-8b`). Any OpenAI-compatible local server works — e.g. Ollama on
-`:11434/v1` — just point the endpoint/model at it.
+LM Studio does the refinement, so it's required. You don't have to configure it: on launch
+Šapat finds the `lms` CLI, starts the server (`:1234`), and downloads + loads the model
+(`qwen/qwen3-8b` MLX, ~5 GB) with a generous context window. If LM Studio can't be made ready,
+Šapat keeps your transcript on screen and offers **Retry** + **Open LM Studio** rather than
+producing a rougher result. The model id is configurable in Settings.
 
 ## Build from source
 
@@ -101,7 +104,9 @@ updater picks up. Every push/PR to `main` is build-checked + tested by
 | `Sources/SapatApp.swift` · `AppDelegate.swift` | `@main`; status item, popover, hotkey, menu-bar glyph/waveform |
 | `Sources/RecorderViewModel.swift` | `@Observable @MainActor` record → transcribe → refine flow |
 | `Sources/WhisperEngine.swift` | WhisperKit wrapper, tuned for long-form VAD silence handling |
-| `Sources/LMStudioClient.swift` | OpenAI-compatible refiner client + the refinement system prompt |
+| `Sources/LMStudioClient.swift` | LM Studio refiner client: context query, chunk-if-needed + merge, system prompt |
+| `Sources/LMStudioManager.swift` | Auto-start via the `lms` CLI: server up, model downloaded + loaded |
+| `Sources/TranscriptChunker.swift` | Pure, tested sentence-boundary splitter for long transcripts |
 | `Sources/OutputSanitizer.swift` | Conservative scaffolding stripper (never eats real content) |
 | `Sources/HistoryStore.swift` · `HistoryView.swift` | JSON history + concise collapsible UI |
 | `Sources/PopoverView.swift` · `Theme.swift` | SwiftUI popover + copper-on-stone design tokens |
@@ -111,14 +116,14 @@ updater picks up. Every push/PR to `main` is build-checked + tested by
 
 ## Notes
 
-- First run downloads `large-v3` (~2.9 GB); cached thereafter. Releases are ad-hoc signed, not notarized.
-- The offline Whisper translation is rougher than the LM Studio refinement.
+- First run downloads `large-v3` (~2.9 GB) and, via LM Studio, the refinement model (~5 GB); both cached thereafter. Releases are ad-hoc signed, not notarized.
+- LM Studio is required for refinement; Šapat starts its server and loads the model automatically (and chunks long transcripts so none is dropped).
 - Bundle id: `com.stevanpavlovic.Sapat`.
 
 ## Dependencies
 
 - [WhisperKit](https://github.com/argmaxinc/argmax-oss-swift) — on-device speech (pinned to 1.0.0)
-- [LM Studio](https://lmstudio.ai) + an MLX model (`qwen/qwen3-8b`) — optional local refinement
+- [LM Studio](https://lmstudio.ai) + its `lms` CLI and an MLX model (`qwen/qwen3-8b`) — required for refinement (auto-managed)
 
 ## License
 

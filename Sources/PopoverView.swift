@@ -105,12 +105,15 @@ struct PopoverView: View {
             recordButton
             statusLine
             preparingProgress
+            if let status = vm.lmStudioStatus { lmStudioStatusView(status) }
             if let notice = vm.notice { noticeView(notice) }
             if case .done = vm.state {
                 resultCard
-                if let hint = vm.hint { hintView(hint) }
             }
-            if case .error(let error) = vm.state { errorView(error) }
+            if case .error(let error) = vm.state {
+                if !vm.serbianText.isEmpty { transcriptCard }
+                errorView(error)
+            }
             updateSection
         }
         .padding(.horizontal, Theme.s4)
@@ -287,24 +290,34 @@ struct PopoverView: View {
         }
     }
 
-    // MARK: Hint (offline fallback) — same card family as notice/error
+    // MARK: LM Studio warm-up status (server start / model download / load)
 
-    private func hintView(_ hint: AppHint) -> some View {
-        HStack(alignment: .top, spacing: Theme.s2) {
-            Image(systemName: "info.circle").foregroundStyle(Theme.copperLight)
-            VStack(alignment: .leading, spacing: Theme.s1) {
-                Text(hint.message).font(.caption).foregroundStyle(Theme.textSecondary)
-                if let action = hint.action {
-                    Button(action.label) { vm.performRecoveryAction(action) }
-                        .buttonStyle(.plain)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Theme.copperLight)
-                }
-            }
+    private func lmStudioStatusView(_ text: String) -> some View {
+        HStack(spacing: Theme.s2) {
+            ProgressView().controlSize(.small)
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
         .padding(Theme.s3)
         .cardSurface(Theme.rSmall)
+    }
+
+    // MARK: Preserved transcript (shown on a refine error so nothing said is lost)
+
+    private var transcriptCard: some View {
+        ScrollView {
+            resultColumn(title: "СРПСКИ",
+                         text: vm.serbianText,
+                         font: .system(size: 13),
+                         color: Theme.textSecondary)
+                .padding(Theme.s3)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+        .frame(maxHeight: 140)
+        .cardSurface()
     }
 
     // MARK: Error
