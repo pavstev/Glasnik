@@ -366,7 +366,8 @@ struct PopoverView: View {
                     resultColumn(title: vm.resultTitle,
                                  text: vm.streamingText,
                                  font: .system(size: 14),
-                                 color: Theme.textPrimary)
+                                 color: Theme.textPrimary,
+                                 announceValue: false)
                 }
                 .padding(Theme.s3)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -376,8 +377,12 @@ struct PopoverView: View {
         .cardSurface()
     }
 
-    private func resultColumn(title: String, text: String, font: Font, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: Theme.s1 + 2) {
+    /// `announceValue: false` suppresses the `.accessibilityValue` for the live streaming column —
+    /// otherwise VoiceOver re-reads the whole growing text on every token, flooding the user. The
+    /// committed `resultCard` (announceValue defaulted true) speaks the final value once.
+    private func resultColumn(title: String, text: String, font: Font, color: Color,
+                              announceValue: Bool = true) -> some View {
+        let column = VStack(alignment: .leading, spacing: Theme.s1 + 2) {
             Text(title)
                 .font(.system(size: 10, weight: .semibold))
                 .tracking(0.6)
@@ -392,7 +397,9 @@ struct PopoverView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(title)
-        .accessibilityValue(text)
+        return Group {
+            if announceValue { column.accessibilityValue(text) } else { column }
+        }
     }
 
     /// The produced-artifact column — rendered per the producing mode's `renderKind` (Markdown

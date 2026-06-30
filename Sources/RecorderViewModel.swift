@@ -428,21 +428,35 @@ final class RecorderViewModel {
         streamingText = ""
         do {
             try await ensureInferenceReady()
-            let result = try await pipeline.run(
-                transcript: serbianText,
-                mode: mode,
-                glossary: TranslationPreferences.glossary,
-                onProgress: { [weak self] detail in
-                    Task { @MainActor in self?.processingDetail = detail }
-                },
-                onStage: { [weak self] progress in
-                    Task { @MainActor in self?.applyStage(progress) }
-                },
-                onDelta: { [weak self] delta in
-                    Task { @MainActor in self?.appendStreamDelta(delta) }
-                }
-            )
-            finish(english: result.primary)
+            // Deltas arrive single-producer + in order from the pipeline, but a per-token
+            // `Task { @MainActor … }` would NOT preserve that order (main-actor jobs aren't FIFO
+            // by creation). Funnel them through one AsyncStream drained by a single sequential
+            // main-actor consumer, so tokens append exactly as produced.
+            let (deltas, deltaCont) = AsyncStream<String>.makeStream()
+            let drain = Task { @MainActor [weak self] in
+                for await delta in deltas { self?.appendStreamDelta(delta) }
+            }
+            do {
+                let result = try await pipeline.run(
+                    transcript: serbianText,
+                    mode: mode,
+                    glossary: TranslationPreferences.glossary,
+                    onProgress: { [weak self] detail in
+                        Task { @MainActor in self?.processingDetail = detail }
+                    },
+                    onStage: { [weak self] progress in
+                        Task { @MainActor in self?.applyStage(progress) }
+                    },
+                    onDelta: { deltaCont.yield($0) }
+                )
+                deltaCont.finish()
+                await drain.value // let every buffered delta land before we commit the result
+                finish(english: result.primary)
+            } catch {
+                deltaCont.finish()
+                await drain.value
+                throw error
+            }
         } catch is CancellationError {
             setEngineStatus(nil)
             processingDetail = nil

@@ -111,17 +111,21 @@ final class HistoryStore {
     private(set) var records: [TranslationRecord] = []
 
     private let url: URL
+    private let memory: MemoryStore
 
-    init() {
+    /// `url` and `memory` are injectable for tests; production uses the JSON in Application
+    /// Support and the shared semantic index.
+    init(url: URL? = nil, memory: MemoryStore = .shared) {
         let base = (try? Brand.applicationSupportDirectory())
             ?? FileManager.default.temporaryDirectory
-        url = base.appendingPathComponent("history.json")
+        self.url = url ?? base.appendingPathComponent("history.json")
+        self.memory = memory
         load()
         // Seed the semantic index from the durable JSON (idempotent backfill). JSON stays the
         // record of truth — preserving the tolerant decode + failed-entry retry guarantees —
         // while the index powers retrieval and search.
         let snapshot = records.map(Self.indexFields)
-        Task { await MemoryStore.shared.backfill(snapshot) }
+        Task { await memory.backfill(snapshot) }
     }
 
     /// Insert a new record at the top, or replace an existing one in place (matched by `id`).
@@ -129,14 +133,17 @@ final class HistoryStore {
     /// it — a failure that later succeeds simply flips to a completed entry.
     func upsert(_ record: TranslationRecord) {
         if let index = records.firstIndex(where: { $0.id == record.id }) {
-            records[index] = record
+            var merged = record
+            merged.pinned = records[index].pinned // pin is store-owned ordering state — a re-upsert (e.g. Retry) must not clobber it
+            records[index] = merged
         } else {
             records.insert(record, at: 0)
         }
         sortRecords()
         save()
         let fields = Self.indexFields(record)
-        Task { await MemoryStore.shared.index(
+        let store = memory
+        Task { await store.index(
             id: fields.id, date: fields.date, serbian: fields.serbian,
             artifact: fields.artifact, intent: "", mode: fields.mode) }
     }
@@ -149,7 +156,8 @@ final class HistoryStore {
         }
         save()
         let id = record.id.uuidString
-        Task { await MemoryStore.shared.remove(id: id) }
+        let store = memory
+        Task { await store.remove(id: id) }
     }
 
     private static func indexFields(_ r: TranslationRecord) -> (id: String, date: Date, serbian: String, artifact: String, mode: String) {
