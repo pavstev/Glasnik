@@ -122,6 +122,17 @@ final class UpdateChecker {
             checksumAssetURL = Self.checksumAsset(from: release.assets).flatMap { URL(string: $0.browserDownloadURL) }
             signatureAssetURL = Self.signatureAsset(from: release.assets).flatMap { URL(string: $0.browserDownloadURL) }
 
+            // A release with no detached signature can't be verified, so skip it QUIETLY —
+            // absence of a signature is the benign "not signed yet" case (e.g. a release that
+            // predates signing), not tampering. We never download or offer an unverifiable
+            // build, and never alarm the user. The loud "refused for your safety" state is
+            // reserved for a signature that is present but invalid (the real tamper signal).
+            guard signatureAssetURL != nil else {
+                Log.update.info("Latest release \(latest, privacy: .public) is unsigned — skipping (not verifiable).")
+                if case .readyToInstall = phase {} else { phase = .idle }
+                return
+            }
+
             // Already staged this version? Leave it ready.
             if case .readyToInstall(let staged) = phase, staged == latest { return }
 

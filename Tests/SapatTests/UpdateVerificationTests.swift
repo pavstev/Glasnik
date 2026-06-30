@@ -58,6 +58,17 @@ final class UpdateVerificationTests: XCTestCase {
         XCTAssertEqual(decoded?.count, 32, "embedded ed25519 public key must be 32 bytes")
     }
 
+    func testSignatureAssetDetectionGatesUnsignedReleases() {
+        let signed = [
+            UpdateChecker.ReleaseAsset(name: "Sapat-2.0.0.zip", browserDownloadURL: "https://x/Sapat-2.0.0.zip"),
+            UpdateChecker.ReleaseAsset(name: "Sapat-2.0.0.zip.sig", browserDownloadURL: "https://x/Sapat-2.0.0.zip.sig"),
+        ]
+        XCTAssertNotNil(UpdateChecker.signatureAsset(from: signed))
+        // An unsigned release (no .sig) has no signature asset → the updater skips it quietly.
+        let unsigned = [UpdateChecker.ReleaseAsset(name: "Sapat-1.6.0.zip", browserDownloadURL: "https://x/Sapat-1.6.0.zip")]
+        XCTAssertNil(UpdateChecker.signatureAsset(from: unsigned))
+    }
+
     func testParseSignatureAcceptsBase64AndRaw() {
         let raw = Data((0..<64).map { UInt8($0 & 0xff) })
         XCTAssertEqual(ReleaseSignature.parseSignature(Data(raw.base64EncodedString().utf8)), raw)
