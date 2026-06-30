@@ -24,7 +24,7 @@ indirect enum JSONValue: Sendable {
         case .array(let items):
             return "[\(items.map(\.jsonString).joined(separator: ","))]"
         case .string(let value): return JSONValue.encodeString(value)
-        case .number(let value): return String(value)
+        case .number(let value): return value.isFinite ? String(value) : "null" // JSON has no inf/nan
         case .integer(let value): return String(value)
         case .bool(let value): return value ? "true" : "false"
         case .null: return "null"
