@@ -63,7 +63,8 @@ final class ModelStoreTests: XCTestCase {
         let folder = await store.folder(for: model)
         try "abc".data(using: .utf8)!.write(to: folder.appendingPathComponent("weights.bin"))
 
-        XCTAssertTrue(await store.isInstalled(model))
+        let installed = await store.isInstalled(model)
+        XCTAssertTrue(installed)
         let returned = try await store.install(model)
         XCTAssertEqual(returned.lastPathComponent, "demo")
     }

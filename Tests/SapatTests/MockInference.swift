@@ -24,23 +24,22 @@ final class MockInference: Inference, @unchecked Sendable {
     func prepare(onStatus: @escaping @Sendable (String?) -> Void) async throws {}
 
     func generate(_ request: InferenceRequest) async throws -> String {
-        lock.lock()
-        let index = callCount
-        callCount += 1
-        _requests.append(request)
-        lock.unlock()
+        let index = lock.withLock { () -> Int in
+            let current = callCount
+            callCount += 1
+            _requests.append(request)
+            return current
+        }
         return responder(request, index)
     }
 
     var contextWindow: Int { get async { contextWindowValue } }
 
     var requests: [InferenceRequest] {
-        lock.lock(); defer { lock.unlock() }
-        return _requests
+        lock.withLock { _requests }
     }
 
     var generateCallCount: Int {
-        lock.lock(); defer { lock.unlock() }
-        return callCount
+        lock.withLock { callCount }
     }
 }
